@@ -3,21 +3,33 @@ title: "EV Power - Lab 4 Project Report"
 format: typst
 ---
 
-# Example Solution 1
-
 ## **Part 0: libraries**
 
 ```{r}
-
+library(tidyverse)
+library(dplyr)
+library(usmap)
+library(janitor)
 ```
 
 ## **Part 1:** **Defining Research Question**
 
-Chosen Question:
+Chosen Question: Are EV registrations per unit of total energy use higher in states that rely more on renewable energy?
 
 ## **Part 2: Data Preparation and Cleaning**
 
 ```{r}
+#load my data in, and got the clean_names() function to help me clean the data 
+renew21 <- read_csv("data/renew-use-2021.csv") |> clean_names()
+renew22 <- read_csv("data/renew-use-2022.csv") |> clean_names()
+renew23 <- read_csv("data/renew-use-2023.csv") |> clean_names()
+
+total21 <- read_csv("data/total-use-2021.csv") |> clean_names()
+total22 <- read_csv("data/total-use-2022.csv") |> clean_names()
+total23 <- read_csv("data/total-use-2023.csv") |> clean_names()
+
+price <- read_csv("data/av-energy-price-2021-2023.csv") |> clean_names()
+ev <- read_csv("data/ev-registrations-by-state-2023.csv") |> clean_names()
 
 ```
 
@@ -25,10 +37,45 @@ Chosen Question:
 
 ```{r}
 
+total_long <- total23 |> 
+  pivot_longer(cols = -energy_source, names_to = "state_abbr", values_to = "total_use") |>
+mutate(year = 2023) |>
+mutate(
+    state_abbr = toupper(state_abbr),
+    year = 2023,
+    state = state.name[match(state_abbr, state.abb)]
+  )
+
+renew_long <- renew23|> 
+    pivot_longer(cols = -energy_source, names_to = "state_abbr", values_to = "renew_use")|>
+mutate(year = 2023)
+
+data_joined <- left_join(
+  renew_long,
+  total_long,
+  by = c("state_abbr", "year", "energy_source")
+)
 ```
 
 ## **Part 4: Mapping Visualization**
 
 ```{r}
+bargraph <- data_joined |>
+  mutate(
+    renew_use = as.numeric(renew_use),
+    total_use = as.numeric(total_use),
+    renew_share = (renew_use / total_use) * 100
+  )
 
+ggplot(bargraph, aes(x = state_abbr, y = renew_share)) +
+  geom_col(fill = "hotpink") +
+  labs(
+    title = "Renewable Energy by State",
+    x = "State",
+    y = "% Renewable"
+  ) +
+  theme_minimal()
+ 
 ```
+
+I struggled to get my graph to work but from the data it seems like some states have very little renewable energy while others are making great progess. Thus some states, renewable cars are not being run off of reneable energy and instead my be doing more hard than good. But that is not true across all situations as some statees, do have robost networks of renewable energy.
